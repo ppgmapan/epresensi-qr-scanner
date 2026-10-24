@@ -38,16 +38,20 @@
    else{document.getElementById('manualValue').value=value;say('Tab aplikasi tidak terhubung. Hasil QR ditampilkan pada kolom manual; salin ke aplikasi utama.');busy=false;}
   }catch(e){document.getElementById('manualValue').value=value;say('Tidak dapat mengirim hasil otomatis. Salin isi QR dari kolom manual ke aplikasi utama.');busy=false;}
  }
- document.getElementById('start').addEventListener('click',function(){
+ function startCamera(){
+  if(scanner){say('Kamera sedang aktif. Arahkan QR generus ke dalam bingkai.');return;}
   if(!window.isSecureContext){say('Halaman ini bukan konteks HTTPS yang aman. Buka URL HTTPS hasil hosting.');return;}
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say('Browser tidak menyediakan API kamera pada halaman ini. Coba Chrome terbaru atau masukkan ID secara manual.');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say('Browser tidak menyediakan API kamera pada halaman ini. Coba Chrome terbaru atau masukkan ID QR secara manual.');return;}
   if(typeof Html5Qrcode==='undefined'){say('Pustaka pemindai QR gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');return;}
-  stopCamera();scanner=new Html5Qrcode('reader',{verbose:false});say('Meminta izin kamera… pilih Izinkan jika browser menampilkan permintaan.');
-  scanner.start({facingMode:'environment'},{fps:10,qrbox:function(w,h){var side=Math.floor(Math.min(w,h)*.76);return {width:side,height:side};},aspectRatio:1.0},function(text){sendValue(text);},function(){}).then(function(){if(!busy)say('Kamera aktif. Arahkan QR generus ke dalam bingkai.');}).catch(function(e){var name=e&&e.name?e.name:'Error';var msg=e&&e.message?e.message:String(e);say('Kamera gagal diaktifkan ('+name+'): '+msg+'\nPeriksa izin kamera untuk situs ini, atau masukkan ID QR secara manual.');stopCamera();});
- });
+  stopCamera();scanner=new Html5Qrcode('reader',{verbose:false});say('Meminta izin kamera… jika browser bertanya, pilih Izinkan.');
+  scanner.start({facingMode:'environment'},{fps:10,qrbox:function(w,h){var side=Math.floor(Math.min(w,h)*.76);return {width:side,height:side};},aspectRatio:1.0},function(text){sendValue(text);},function(){}).then(function(){if(!busy)say('Kamera aktif. Arahkan QR generus ke dalam bingkai.');}).catch(function(e){var name=e&&e.name?e.name:'Error';var msg=e&&e.message?e.message:String(e);say('Kamera gagal diaktifkan ('+name+'): '+msg+'\nPeriksa izin kamera untuk situs ini. Jika belum aktif, tekan “Aktifkan Kamera”.');stopCamera();});
+ }
+ document.getElementById('start').addEventListener('click',startCamera);
  document.getElementById('stop').addEventListener('click',function(){stopCamera();busy=false;say('Kamera dimatikan.');});
  document.getElementById('sendManual').addEventListener('click',function(){sendValue(document.getElementById('manualValue').value);});
  window.addEventListener('pagehide',stopCamera);
+ /* Coba aktifkan kamera otomatis saat halaman GitHub Pages dibuka; tombol tetap tersedia sebagai fallback. */
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(startCamera,250);},{once:true});else setTimeout(startCamera,250);
  if(!token)say('Peringatan: token sesi tidak ditemukan. Buka pemindai melalui tombol “Buka Pemindai Kamera” dari aplikasi utama agar hasil dapat dikirim otomatis.');
 })();
 </script>
