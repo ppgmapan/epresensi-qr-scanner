@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#071525">
+<title>Pemindai QR Presensi PPG</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#071525;color:#eff8ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0,#123c5b 0,#071525 58%);padding:20px}.wrap{max-width:620px;margin:0 auto}.brand{display:flex;align-items:center;gap:12px;margin:6px 0 18px}.logo{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#50e3ee,#3986ff);color:#06243a;font-size:25px;font-weight:900;box-shadow:0 8px 28px #36c8e433}.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#72dce8;font-weight:800}.brand h1{font-size:19px;margin:3px 0 0}.card{border:1px solid #7dc9e533;background:#0c2035dd;border-radius:22px;padding:18px;box-shadow:0 20px 65px #0005}.intro{font-size:13px;line-height:1.55;color:#b8d0e5;margin:0 0 15px}.reader{overflow:hidden;border-radius:16px;min-height:250px;background:#030b14;border:1px solid #70c8e333}.reader video{width:100%!important;max-height:62vh!important;object-fit:cover!important}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}button{border:0;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:800;cursor:pointer}.primary{background:linear-gradient(135deg,#53e5ec,#60a5fa);color:#06243a;flex:1}.secondary{background:#29445e;color:#f2f8ff}.status{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:13px;padding:13px;border-radius:12px;background:#06172a;border:1px solid #6bc5e52b;color:#d5e9f8;font-size:13px;line-height:1.5;min-height:45px}.manual{margin-top:18px;border-top:1px solid #8bcde522;padding-top:15px}.manual label{display:block;font-size:12px;color:#cde8fa;margin-bottom:6px}input{width:100%;padding:12px;border-radius:10px;border:1px solid #75bde477;background:#06172a;color:white;font-size:15px}.small{font-size:11px;color:#91aec4;line-height:1.5;margin-top:14px}@media(max-width:480px){body{padding:12px}.card{padding:13px}.brand h1{font-size:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header class="brand"><div class="logo">▦</div><div><div class="eyebrow">PPG · e-Presensi Pengajian</div><h1>Pemindai QR Generus</h1></div></header>
+ <main class="card">
+  <p class="intro">Halaman ini hanya bertugas membaca QR melalui kamera. Setelah QR terbaca, hasil akan dikirim kembali ke tab aplikasi e-Presensi untuk verifikasi identitas dan penyimpanan presensi. Pastikan tab aplikasi tetap terbuka.</p>
+  <div id="reader" class="reader" aria-label="Kamera pemindai QR"></div>
+  <div class="actions"><button id="start" class="primary" type="button">Aktifkan Kamera</button><button id="stop" class="secondary" type="button">Matikan Kamera</button></div>
+  <div id="status" class="status" role="status" aria-live="polite">Tekan “Aktifkan Kamera”, lalu izinkan akses kamera ketika browser memintanya.</div>
+  <section class="manual"><label for="manualValue">Jika kamera tidak tersedia, masukkan isi QR secara manual</label><input id="manualValue" autocomplete="off" placeholder="ID generus, misalnya P0001"><div class="actions"><button id="sendManual" class="secondary" type="button">Kirim ke Aplikasi</button></div></section>
+  <p class="small">Kamera hanya dapat dipakai pada halaman HTTPS dan setelah izin browser diberikan. Jika akses ditolak, buka ikon pengaturan situs di bilah alamat browser dan izinkan kamera, lalu muat ulang halaman ini.</p>
+ </main>
+</div>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function(){
+ 'use strict';
+ var token='';
+ try{token=new URLSearchParams(location.search).get('ppgQrToken')||'';}catch(e){}
+ var scanner=null, busy=false;
+ var status=document.getElementById('status');
+ function say(s){status.textContent=s;}
+ function stopCamera(){var old=scanner;scanner=null;if(old){try{var p=old.stop();if(p&&p.catch)p.catch(function(){});}catch(e){}try{old.clear();}catch(e){}}document.getElementById('reader').innerHTML='';}
+ function sendValue(value){value=String(value||'').trim();if(!value){say('QR/ID masih kosong.');return;}if(busy)return;busy=true;stopCamera();say('QR terbaca. Mengirim hasil kembali ke aplikasi…');
+  var payload={type:'PPG_QR_SCANNED',token:token,value:value};
+  try{
+   if(window.opener&&!window.opener.closed){window.opener.postMessage(payload,'*');say('Hasil QR sudah dikirim. Kembali ke tab aplikasi e-Presensi untuk melanjutkan verifikasi.');setTimeout(function(){try{window.close();}catch(e){}},900);}
+   else{document.getElementById('manualValue').value=value;say('Tab aplikasi tidak terhubung. Hasil QR ditampilkan pada kolom manual; salin ke aplikasi utama.');busy=false;}
+  }catch(e){document.getElementById('manualValue').value=value;say('Tidak dapat mengirim hasil otomatis. Salin isi QR dari kolom manual ke aplikasi utama.');busy=false;}
+ }
+ document.getElementById('start').addEventListener('click',function(){
+  if(!window.isSecureContext){say('Halaman ini bukan konteks HTTPS yang aman. Buka URL HTTPS hasil hosting.');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say('Browser tidak menyediakan API kamera pada halaman ini. Coba Chrome terbaru atau masukkan ID secara manual.');return;}
+  if(typeof Html5Qrcode==='undefined'){say('Pustaka pemindai QR gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');return;}
+  stopCamera();scanner=new Html5Qrcode('reader',{verbose:false});say('Meminta izin kamera… pilih Izinkan jika browser menampilkan permintaan.');
+  scanner.start({facingMode:'environment'},{fps:10,qrbox:function(w,h){var side=Math.floor(Math.min(w,h)*.76);return {width:side,height:side};},aspectRatio:1.0},function(text){sendValue(text);},function(){}).then(function(){if(!busy)say('Kamera aktif. Arahkan QR generus ke dalam bingkai.');}).catch(function(e){var name=e&&e.name?e.name:'Error';var msg=e&&e.message?e.message:String(e);say('Kamera gagal diaktifkan ('+name+'): '+msg+'\nPeriksa izin kamera untuk situs ini, atau masukkan ID QR secara manual.');stopCamera();});
+ });
+ document.getElementById('stop').addEventListener('click',function(){stopCamera();busy=false;say('Kamera dimatikan.');});
+ document.getElementById('sendManual').addEventListener('click',function(){sendValue(document.getElementById('manualValue').value);});
+ window.addEventListener('pagehide',stopCamera);
+ if(!token)say('Peringatan: token sesi tidak ditemukan. Buka pemindai melalui tombol “Buka Pemindai Kamera” dari aplikasi utama agar hasil dapat dikirim otomatis.');
+})();
+</script>
+</body>
+</html>
